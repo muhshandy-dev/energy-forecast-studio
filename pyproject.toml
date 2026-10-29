@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "energy-forecast-studio"
+version = "0.1.0"
+description = "Prakiraan beban listrik per jam dengan uji mundur bergulir: seasonal naive vs statistik vs ML."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "pyarrow>=15",
+    "statsmodels>=0.14",
+    "lightgbm>=4.3",
+    "holidays>=0.50",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6", "sktime>=0.30"]
+
+[project.scripts]
+energy-forecast = "energy_forecast.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["realdata: butuh data OPSD asli di data/raw/opsd"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["notebooks"]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
