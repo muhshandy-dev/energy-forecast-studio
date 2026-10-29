@@ -50,9 +50,23 @@ Detail: [docs/laporan-evaluasi.md](docs/laporan-evaluasi.md) dan [docs/kartu-mod
 
 ## Hasil
 
-Belum ada hasil resmi. Angka akan ditulis di sini dari `reports/results.json` setelah pipeline
-berjalan pada data OPSD. Selama pengembangan, pipeline diuji dengan salinan data ENTSO-E yang
-tidak boleh diterbitkan; `energy-forecast export-web` menolak sumber itu.
+Belum ada hasil resmi. Hasil resmi dibuat oleh workflow GitHub Actions **Evaluasi OPSD**
+(`.github/workflows/evaluate.yml`, dijalankan manual) yang mengunduh data OPSD, mengunci SHA-256,
+menjalankan eksperimen, memeriksa angka secara independen, lalu membuka pull request berisi
+`reports/`, `web/public/data/`, dan [docs/laporan-evaluasi.md](docs/laporan-evaluasi.md).
+
+### Catatan kejujuran tentang periode uji
+
+Lingkungan pengembangan tidak bisa menjangkau host OPSD, jadi pipeline lengkap (termasuk periode
+uji) diuji pada salinan ENTSO-E Jerman di HuggingFace, yang berasal dari sumber primer yang sama
+dengan kolom OPSD. Artinya angka uji perkiraan sudah terlihat selama pengembangan. Untuk membatasi
+dampaknya:
+
+- Grid kandidat, fitur, jendela interval, dan pembagian waktu dikunci di commit pertama, sebelum
+  pipeline pertama kali selesai berjalan.
+- Satu-satunya perubahan sesudah itu adalah perbaikan bug satuan waktu (pandas 3) yang membuat
+  semua interval kosong; tidak ada penyetelan model berdasarkan angka uji.
+- Hasil dari salinan disimpan di `reports/dev/` (tidak di-commit) dan ditolak oleh `export-web`.
 
 ## Website
 
@@ -77,6 +91,11 @@ make web-data verify    # ekspor JSON web + pemeriksaan independen angka
 make test lint
 make web-install web-test web-build
 ```
+
+Tanpa mesin lokal: buka tab **Actions → Evaluasi OPSD → Run workflow**. Agar workflow bisa
+membuka pull request, aktifkan *Settings → Actions → General → Allow GitHub Actions to create and
+approve pull requests*. PR yang dibuat oleh workflow tidak memicu CI otomatis; tutup lalu buka lagi
+PR itu, atau dorong commit kecil, untuk menjalankan CI.
 
 Notebook Kaggle yang menjalankan langkah yang sama: [notebooks/kaggle_backtest.ipynb](notebooks/kaggle_backtest.ipynb).
 
