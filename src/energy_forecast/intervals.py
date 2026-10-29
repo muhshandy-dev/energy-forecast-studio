@@ -43,10 +43,11 @@ def residual_quantiles(
     origin yang butuh interval (boleh di luar ``origins``, misalnya origin perencanaan).
     """
     out = np.full((len(targets), len(probs), HORIZON), np.nan)
-    o_ns = origins.asi8
+    # Satuan eksplisit: pandas 3 bisa memakai resolusi mikrodetik untuk DatetimeIndex.
+    o_ns = origins.as_unit("ns").asi8
     full = pd.Timedelta(hours=HORIZON).value
     window = pd.Timedelta(days=window_days).value
-    for i, t in enumerate(targets.asi8):
+    for i, t in enumerate(targets.as_unit("ns").asi8):
         mask = (o_ns + full <= t) & (o_ns >= t - window)
         if mask.sum() < window_days // 2:
             continue  # residual belum cukup: interval dibiarkan kosong (NaN)

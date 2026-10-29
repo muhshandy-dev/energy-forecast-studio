@@ -76,7 +76,7 @@ export function Method({ meta }: { meta: MetaFile }) {
       </Section>
 
       <Section title="Model" id="judul-model">
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Tabel, bisa digulir">
           <table>
             <thead>
               <tr>
@@ -121,7 +121,7 @@ export function Method({ meta }: { meta: MetaFile }) {
         {data ? (
           <details className="table-toggle">
             <summary>Hasil seleksi di validasi 2018</summary>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Tabel, bisa digulir">
               <table>
                 <thead>
                   <tr>

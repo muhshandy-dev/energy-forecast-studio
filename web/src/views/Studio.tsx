@@ -3,7 +3,7 @@ import { Plot } from "../components/Plot";
 import { Loading, Section, Segmented, Stat } from "../components/ui";
 import { modelColor, withAlpha } from "../lib/colors";
 import { loadPlanning } from "../lib/data";
-import { berlinAxis, gw, localDate, localTime, mw, num1, pct } from "../lib/format";
+import { berlinAxis, gw, localTime, mw, num1, pct, utcDate } from "../lib/format";
 import {
   applyShift,
   exceedanceByHour,
@@ -148,7 +148,7 @@ export function Studio({ meta, theme }: { meta: MetaFile; theme: string }) {
         xref: "paper",
         x: 1,
         y: view.cap,
-        yanchor: "bottom",
+        yanchor: "top",
         xanchor: "right",
         text: `Batas kapasitas ${mw(view.cap)}`,
         showarrow: false,
@@ -157,9 +157,9 @@ export function Studio({ meta, theme }: { meta: MetaFile; theme: string }) {
       {
         x: fx[0],
         yref: "paper",
-        y: 1,
+        y: 0,
         xanchor: "left",
-        yanchor: "top",
+        yanchor: "bottom",
         text: " Mulai prakiraan",
         showarrow: false,
         font: { color: muted, size: 11 },
@@ -173,7 +173,7 @@ export function Studio({ meta, theme }: { meta: MetaFile; theme: string }) {
       y: view.ex.map((e) => e.p * 100),
       type: "bar",
       name: "Peluang melampaui batas",
-      marker: { color: view.ex.map((e) => (e.bound === "exact" ? orange : withAlpha(orange, 0.45))) },
+      marker: { color: view.ex.map((e) => (e.bound === "exact" ? orange : muted)), opacity: 0.9 },
       customdata: view.ex.map(exceedLabel),
       hovertemplate: "%{customdata}<extra>Peluang > batas</extra>",
       showlegend: false,
@@ -315,12 +315,12 @@ export function Studio({ meta, theme }: { meta: MetaFile; theme: string }) {
             label="Grafik batang peluang beban melewati batas kapasitas per jam"
           />
           <p className="help">
-            Batang pucat berarti peluangnya di luar kuantil tersimpan (di bawah 2,5% atau di atas 97,5%), sehingga
+            Batang abu-abu berarti peluangnya di luar kuantil tersimpan (di bawah 2,5% atau di atas 97,5%), sehingga
             hanya batasnya yang diketahui.
           </p>
           <details className="table-toggle">
             <summary>Lihat angka per jam</summary>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Tabel, bisa digulir">
               <table>
                 <thead>
                   <tr>
@@ -350,7 +350,7 @@ export function Studio({ meta, theme }: { meta: MetaFile; theme: string }) {
         <div className="provenance card">
           <p>
             <strong>Prakiraan tersimpan, bukan dihitung ulang di browser.</strong> Model {MODEL_LABEL[model]} versi{" "}
-            <code>{info.version}</code>, dicocokkan pada seluruh data sampai {localDate(meta.protocol.data_end_utc)}.
+            <code>{info.version}</code>, dicocokkan pada seluruh data sampai {utcDate(meta.protocol.data_end_utc)} (UTC).
             Prakiraan dimulai {localTime(plan.origin_utc)} dan diekspor {meta.export_date}. Interval memakai residual uji
             mundur {info.conformal_window_days} hari terakhir.
           </p>

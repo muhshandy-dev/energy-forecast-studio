@@ -55,7 +55,7 @@ export function Errors({ theme }: { theme: string }) {
         </div>
 
         <h3 className="sub">10 minggu prakiraan terburuk</h3>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Tabel, bisa digulir">
           <table>
             <thead>
               <tr>
@@ -117,7 +117,7 @@ export function Errors({ theme }: { theme: string }) {
           theme={theme}
           label={`Grafik MAE ${MODEL_LABEL[model]} per hari dalam seminggu`}
         />
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Tabel, bisa digulir">
           <table>
             <thead>
               <tr>

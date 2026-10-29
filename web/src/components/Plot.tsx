@@ -12,8 +12,29 @@ type Props = {
 };
 
 let plotlyPromise: Promise<typeof import("plotly.js-basic-dist-min").default> | null = null;
+const ID_LOCALE = {
+  moduleType: "locale",
+  name: "id",
+  dictionary: {},
+  format: {
+    days: ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"],
+    shortDays: ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"],
+    months: [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+    ],
+    shortMonths: ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"],
+    date: "%d/%m/%Y",
+    decimal: ",",
+    thousands: ".",
+  },
+};
+
 const loadPlotly = () => {
-  plotlyPromise ??= import("plotly.js-basic-dist-min").then((m) => m.default);
+  plotlyPromise ??= import("plotly.js-basic-dist-min").then((m) => {
+    m.default.register(ID_LOCALE);
+    return m.default;
+  });
   return plotlyPromise;
 };
 
@@ -55,6 +76,7 @@ export function baseLayout(height: number): Layout {
       tickfont: { color: muted },
       zeroline: false,
       separatethousands: true,
+      tickformat: ",.0f",
     },
     separators: ",.",
   };

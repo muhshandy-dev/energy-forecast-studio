@@ -105,8 +105,15 @@ for (const scheme of SCHEMES) {
   await page.getByRole("radio", { name: /MSTL/ }).check();
   await waitView(page);
   ok((await page.locator(".provenance").innerText()).includes("MSTL + ETS"), "pilihan model tidak tercermin di keterangan");
-  // Navigasi keyboard: tab pertama bisa dicapai dan diaktifkan.
+  // Navigasi keyboard: tautan lompat lalu navigasi bisa dicapai dari awal halaman.
+  await page.close();
+}
+{
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(`${base}/#kinerja`);
+  await waitView(page);
   await page.keyboard.press("Tab");
+  ok(await page.evaluate(() => document.activeElement?.classList.contains("skip")), "tab pertama bukan tautan lompat");
   await page.keyboard.press("Tab");
   ok(await page.evaluate(() => document.activeElement?.tagName === "A"), "fokus keyboard tidak mencapai navigasi");
   await page.close();

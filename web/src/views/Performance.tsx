@@ -52,10 +52,10 @@ export function Performance({ meta, theme }: { meta: MetaFile; theme: string }) 
 
   return (
     <div className="stack">
-      <Section title="Kinerja model" id="judul-kinerja">
+      <Section title="Ringkasan metrik" id="judul-kinerja">
         <Segmented label="Periode" value={period} options={PERIODS} onChange={setPeriod} />
         <p className={`verdict verdict-${v.kind}`}>{v.text}</p>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Tabel, bisa digulir">
           <table className="metrics">
             <caption>
               {p.n_origins} origin harian. MAE dalam MW; MASE = MAE dibagi {num0(meta.protocol.mase_scale_mw)} MW (galat

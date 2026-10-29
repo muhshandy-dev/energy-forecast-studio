@@ -37,6 +37,8 @@ const dfUtc = new Intl.DateTimeFormat("id-ID", {
 /** Waktu lokal Jerman (data beban adalah beban Jerman). */
 export const localTime = (iso: string) => dtf.format(new Date(iso));
 export const localDate = (iso: string) => df.format(new Date(iso));
+/** Tanggal dari stempel waktu ISO menurut kalender UTC (dipakai untuk batas data). */
+export const utcDate = (iso: string) => dfUtc.format(new Date(iso));
 /** Tanggal kalender tanpa zona (mis. "2019-03-04"). */
 export const plainDate = (ymd: string) => dfUtc.format(new Date(`${ymd}T00:00:00Z`));
 

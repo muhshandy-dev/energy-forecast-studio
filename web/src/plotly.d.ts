@@ -7,6 +7,7 @@ declare module "plotly.js-basic-dist-min" {
   const Plotly: {
     react(el: HTMLElement, data: Trace[], layout: Layout, config: Config): Promise<unknown>;
     purge(el: HTMLElement): void;
+    register(module: Record<string, unknown>): void;
     Plots: { resize(el: HTMLElement): void };
   };
   export default Plotly;

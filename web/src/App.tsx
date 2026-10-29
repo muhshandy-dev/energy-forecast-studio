@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Loading } from "./components/ui";
 import { loadMeta } from "./lib/data";
-import { localDate } from "./lib/format";
+import { utcDate } from "./lib/format";
 import { useTheme, type ThemeChoice } from "./lib/theme";
 import { useAsync } from "./lib/useAsync";
 import { Errors } from "./views/Errors";
@@ -113,7 +113,7 @@ export function App() {
             <div className="page-head">
               <h1>{PAGE_TITLE[tab]}</h1>
               <p className="mode-label">
-                Mode demo: prakiraan batch tersimpan · data sampai {localDate(meta.protocol.data_end_utc)} · diekspor{" "}
+                Mode demo: prakiraan batch tersimpan · data sampai {utcDate(meta.protocol.data_end_utc)} (UTC) · diekspor{" "}
                 {meta.export_date}
               </p>
             </div>

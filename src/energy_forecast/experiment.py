@@ -349,7 +349,7 @@ def write_outputs(results: dict, reports_dir: Path) -> None:
         encoding="utf-8",
     )
     payload = {
-        "origins_ns": arrays["test_origins"].asi8,
+        "origins_ns": arrays["test_origins"].as_unit("ns").asi8,
         "actual": arrays["test_actual"].astype(np.float32),
     }
     for name, f in arrays["test_forecasts"].items():

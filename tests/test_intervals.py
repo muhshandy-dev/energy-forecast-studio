@@ -25,6 +25,7 @@ def test_only_complete_past_residuals_are_used():
     errors[:40] = np.random.default_rng(0).normal(0, 1, (40, HORIZON))
     target = origins[[47]]
     base = residual_quantiles(errors, origins, target, (0.1, 0.9), window_days=28)
+    assert not np.isnan(base).any()
     # origin 41..59 belum lengkap (atau di masa depan) saat origin 47 -> mengubahnya tak berpengaruh
     errors2 = errors.copy()
     errors2[41:] = 1e6
@@ -34,7 +35,27 @@ def test_only_complete_past_residuals_are_used():
     errors3 = errors.copy()
     errors3[40] = 1e6
     changed = residual_quantiles(errors3, origins, target, (0.1, 0.9), window_days=28)
+    assert not np.isnan(changed).any()
     assert not np.array_equal(base, changed)
+
+
+def test_microsecond_and_nanosecond_indexes_agree():
+    origins = pd.date_range("2018-01-01", periods=60, freq="1D", tz="UTC")
+    errors = np.random.default_rng(1).normal(0, 1, (60, HORIZON))
+    a = residual_quantiles(errors, origins.as_unit("us"), origins[[50]].as_unit("us"), (0.5,), 28)
+    b = residual_quantiles(errors, origins.as_unit("ns"), origins[[50]].as_unit("s"), (0.5,), 28)
+    assert not np.isnan(a).any()
+    np.testing.assert_array_equal(a, b)
+
+
+def test_coverage_of_exchangeable_errors_is_near_nominal():
+    """Pada residual iid, interval konformal harus mendekati coverage nominal."""
+    rng = np.random.default_rng(3)
+    origins = pd.date_range("2018-01-01", periods=400, freq="1D", tz="UTC")
+    errors = rng.normal(0, 1, (400, HORIZON))
+    q = residual_quantiles(errors, origins, origins[100:], (0.1, 0.9), 56)
+    inside = (errors[100:] >= q[:, 0]) & (errors[100:] <= q[:, 1])
+    assert abs(inside.mean() - 0.8) < 0.02
 
 
 def test_insufficient_history_gives_nan():

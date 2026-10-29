@@ -24,7 +24,7 @@ def analyse(
     special = holiday | cal["xmas"].to_numpy()[target_pos].astype(bool)
 
     out: dict = {"by_model": {}, "weekly_mae": {}}
-    weeks = origins.to_period("W-SUN").start_time
+    weeks = origins.tz_localize(None).to_period("W-SUN").start_time
     week_labels = sorted(set(weeks))
     out["weekly_mae"]["week_start"] = [str(w.date()) for w in week_labels]
     for name, f in forecasts.items():
