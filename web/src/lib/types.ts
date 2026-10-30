@@ -1,4 +1,4 @@
-export type ModelName = "lightgbm" | "mstl_ets" | "snaive168" | "snaive24";
+export type ModelName = "ensemble" | "lightgbm" | "mstl_ets" | "snaive168" | "snaive24";
 
 export type PointBlock = { mae: number; mase: number; rmse: number; mape: number; bias: number };
 export type WeekBlock = PointBlock & {
@@ -15,7 +15,7 @@ export type IntervalLevel = {
 };
 export type ModelMetrics = {
   day_ahead: PointBlock;
-  week_ahead: WeekBlock;
+  week_ahead: WeekBlock & { mae_minus_lightgbm?: number; mae_minus_lightgbm_ci95?: [number, number] };
   interval: { n_origins_with_interval: number; "80": IntervalLevel; "95": IntervalLevel };
 };
 export type PeriodMetrics = { n_origins: number } & Record<ModelName, ModelMetrics>;
@@ -29,7 +29,17 @@ export type MetricsFile = {
     criterion_interval: string;
     mstl_ets: { params: Record<string, unknown>; val_mae_week_ahead: number }[];
     lightgbm: { params: Record<string, unknown>; val_mae_week_ahead: number }[];
-    conformal_window: Record<ModelName, { window_days: number; mean_interval_score: number }[]>;
+    ensemble?: {
+      day: number;
+      weight_lightgbm: number;
+      val_mae: number;
+      val_mae_lightgbm_only: number;
+      val_mae_mstl_only: number;
+    }[];
+    conformal_window: Record<
+      ModelName,
+      { window_days: number; mode?: "absolute" | "relative"; mean_interval_score: number }[]
+    >;
   };
 };
 
@@ -48,9 +58,18 @@ export type MetaFile = {
     mase_scale_definition: string;
     interval_method: string;
     interval_levels: number[];
+    version?: string;
     bootstrap: { resamples: number; block_days: number; seed: number };
   };
-  models: Record<ModelName, { params: Record<string, unknown>; version: string; conformal_window_days: number }>;
+  models: Record<
+    ModelName,
+    {
+      params: Record<string, unknown>;
+      version: string;
+      conformal_window_days: number;
+      conformal_residual?: "absolute" | "relative";
+    }
+  >;
   environment: Record<string, string>;
   export_date: string;
 };
@@ -96,9 +115,30 @@ export type ErrorsFile = {
   dow_labels: string[];
 };
 
-export const MODEL_ORDER: ModelName[] = ["lightgbm", "mstl_ets", "snaive168", "snaive24"];
+export const MODEL_ORDER: ModelName[] = ["ensemble", "lightgbm", "mstl_ets", "snaive168", "snaive24"];
+
+/** Model yang ada di berkas data (hasil v1 tidak punya model gabungan). */
+export function modelsIn(rec: object): ModelName[] {
+  return MODEL_ORDER.filter((m) => m in rec);
+}
+
+/**
+ * Model untuk grafik banyak garis. Bila ada model gabungan, LightGBM (komponennya) tidak
+ * digambar bersamanya: kurvanya hampir berimpit dan warna biru-ungu sulit dibedakan.
+ * Angka LightGBM tetap ada di tabel.
+ */
+export function chartModels(rec: object): ModelName[] {
+  const all = modelsIn(rec);
+  return all.includes("ensemble") ? all.filter((m) => m !== "lightgbm") : all;
+}
+
+/** Model utama: gabungan bila tersedia, selain itu LightGBM. */
+export function headlineModel(rec: object): ModelName {
+  return "ensemble" in rec ? "ensemble" : "lightgbm";
+}
 
 export const MODEL_LABEL: Record<ModelName, string> = {
+  ensemble: "Gabungan",
   lightgbm: "LightGBM",
   mstl_ets: "MSTL + ETS",
   snaive168: "Naive mingguan",
@@ -106,6 +146,7 @@ export const MODEL_LABEL: Record<ModelName, string> = {
 };
 
 export const MODEL_KIND: Record<ModelName, string> = {
+  ensemble: "LightGBM + MSTL + ETS, bobot per hari",
   lightgbm: "Machine learning",
   mstl_ets: "Statistik (statsmodels)",
   snaive168: "Baseline: minggu lalu, jam yang sama",

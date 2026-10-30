@@ -4,13 +4,14 @@ import { Loading, Section } from "../components/ui";
 import { modelColor } from "../lib/colors";
 import { loadErrors } from "../lib/data";
 import { num0, plainDate, signedMw } from "../lib/format";
-import { MODEL_LABEL, MODEL_ORDER, type ModelName } from "../lib/types";
+import { MODEL_LABEL, modelsIn, headlineModel, type ModelName } from "../lib/types";
 import { useAsync } from "../lib/useAsync";
 
 export function Errors({ theme }: { theme: string }) {
   const { data, error } = useAsync(loadErrors);
-  const [model, setModel] = useState<ModelName>("lightgbm");
+  const [picked, setModel] = useState<ModelName | null>(null);
   if (!data) return <Loading error={error} />;
+  const model: ModelName = picked ?? headlineModel(data.by_model);
   const e = data.by_model[model];
   const color = modelColor(model);
   const hours = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:00`);
@@ -31,7 +32,7 @@ export function Errors({ theme }: { theme: string }) {
         <label className="select">
           <span>Model</span>
           <select value={model} onChange={(ev) => setModel(ev.target.value as ModelName)}>
-            {MODEL_ORDER.map((m) => (
+            {modelsIn(data.by_model).map((m) => (
               <option key={m} value={m}>
                 {MODEL_LABEL[m]}
               </option>

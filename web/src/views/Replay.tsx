@@ -5,7 +5,7 @@ import { modelColor, modelDash, withAlpha } from "../lib/colors";
 import { loadReplay } from "../lib/data";
 import { berlinAxis, mw, pct, signedMw } from "../lib/format";
 import { token } from "../lib/theme";
-import { MODEL_LABEL, MODEL_ORDER, type ModelName } from "../lib/types";
+import { MODEL_LABEL, modelsIn, headlineModel, type ModelName } from "../lib/types";
 import { useAsync } from "../lib/useAsync";
 
 const mean = (a: number[]) => a.reduce((s, v) => s + v, 0) / a.length;
@@ -13,7 +13,8 @@ const mean = (a: number[]) => a.reduce((s, v) => s + v, 0) / a.length;
 export function Replay({ theme }: { theme: string }) {
   const { data, error } = useAsync(loadReplay);
   const [idx, setIdx] = useState<number | null>(null);
-  const [model, setModel] = useState<ModelName>("lightgbm");
+  const [picked, setModel] = useState<ModelName | null>(null);
+  const model: ModelName = picked ?? (data ? headlineModel(data.models) : "lightgbm");
   const [level, setLevel] = useState<0 | 1>(0);
   const [showBaseline, setShowBaseline] = useState(true);
 
@@ -132,7 +133,7 @@ export function Replay({ theme }: { theme: string }) {
           <label className="select">
             <span>Model</span>
             <select value={model} onChange={(e) => setModel(e.target.value as ModelName)}>
-              {MODEL_ORDER.map((m) => (
+              {modelsIn(data.models).map((m) => (
                 <option key={m} value={m}>
                   {MODEL_LABEL[m]}
                 </option>

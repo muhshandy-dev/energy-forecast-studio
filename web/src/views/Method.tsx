@@ -1,7 +1,7 @@
 import { Loading, Section } from "../components/ui";
 import { loadMetrics } from "../lib/data";
-import { num0, plainDate } from "../lib/format";
-import { MODEL_KIND, MODEL_LABEL, MODEL_ORDER, type MetaFile } from "../lib/types";
+import { num0, num2, plainDate } from "../lib/format";
+import { MODEL_KIND, MODEL_LABEL, modelsIn, type MetaFile } from "../lib/types";
 import { useAsync } from "../lib/useAsync";
 
 const REPO = "https://github.com/muhshandy-dev/energy-forecast-studio";
@@ -68,6 +68,13 @@ export function Method({ meta }: { meta: MetaFile }) {
             dengan konfigurasi yang sudah dikunci.
           </li>
         </ol>
+        {pr.version === "v2" ? (
+          <p className="note">
+            <strong>Versi 2.</strong> Protokol ini dirancang sesudah hasil uji versi 1 terlihat (MSTL + ETS gagal di hari
+            libur). Semua pilihan baru tetap diambil hanya dari validasi 2018, tetapi angka uji versi 2 bukan lagi
+            holdout buta. Hasil versi 1 disimpan utuh di repositori sebagai pembanding.
+          </p>
+        ) : null}
         <p>
           Setiap hari pukul 00:00 UTC (origin), model membuat prakiraan {pr.horizon_h} jam ke depan hanya dari data
           sebelum origin (rolling origin, jendela melebar). Model statistik dicocokkan ulang di setiap origin; LightGBM
@@ -87,13 +94,14 @@ export function Method({ meta }: { meta: MetaFile }) {
               </tr>
             </thead>
             <tbody>
-              {MODEL_ORDER.map((m) => (
+              {modelsIn(meta.models).map((m) => (
                 <tr key={m}>
                   <th scope="row">{MODEL_LABEL[m]}</th>
                   <td>{MODEL_KIND[m]}</td>
                   <td>
                     <code>{params(meta.models[m].params)}</code>, jendela interval {meta.models[m].conformal_window_days}{" "}
                     hari
+                    {meta.models[m].conformal_residual === "relative" ? ", residual relatif" : ""}
                   </td>
                   <td>
                     <code>{meta.models[m].version}</code>
@@ -110,13 +118,27 @@ export function Method({ meta }: { meta: MetaFile }) {
           </li>
           <li>
             <strong>MSTL + ETS (statsmodels):</strong> deret beberapa minggu terakhir dipecah menjadi pola harian, pola
-            mingguan, dan sisa. Pola diulang ke depan; tren + sisa diprakirakan dengan ETS teredam.
+            mingguan, dan sisa. Pola diulang ke depan; tren + sisa diprakirakan dengan ETS.
+            {meta.models.mstl_ets.params.calendar_adjust ? (
+              <>
+                {" "}
+                Penyesuaian kalender: jam hari libur, 24–31 Desember, dan hari kejepit di riwayat diganti nilai minggu
+                sebelumnya sebelum dipecah, lalu prakiraan untuk hari khusus dikalikan faktor per jam yang diestimasi
+                dari hari khusus sebelumnya.
+              </>
+            ) : null}
           </li>
           <li>
             <strong>LightGBM:</strong> satu model untuk semua horizon dengan fitur lag 168/336/504 jam, level 24 dan 168
             jam terakhir, jam, hari, libur nasional, hari kejepit, dan musim. Target dinormalkan terhadap rata-rata 7
             hari terakhir agar tahan terhadap perubahan level.
           </li>
+          {"ensemble" in meta.models ? (
+            <li>
+              <strong>Gabungan:</strong> rata-rata berbobot LightGBM dan MSTL + ETS. Bobot dipilih terpisah untuk setiap
+              hari horizon (hari ke-1 sampai ke-7) dari MAE validasi 2018.
+            </li>
+          ) : null}
         </ul>
         {data ? (
           <details className="table-toggle">
@@ -143,6 +165,33 @@ export function Method({ meta }: { meta: MetaFile }) {
                 </tbody>
               </table>
             </div>
+            {data.selection.ensemble ? (
+              <div className="table-wrap" tabIndex={0} role="region" aria-label="Tabel bobot gabungan, bisa digulir">
+                <table>
+                  <caption>Bobot LightGBM pada model gabungan per hari horizon (sisanya MSTL + ETS)</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Hari ke-</th>
+                      <th scope="col" className="num">Bobot LightGBM</th>
+                      <th scope="col" className="num">MAE validasi gabungan</th>
+                      <th scope="col" className="num">Hanya LightGBM</th>
+                      <th scope="col" className="num">Hanya MSTL + ETS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.selection.ensemble.map((r) => (
+                      <tr key={r.day}>
+                        <td>{r.day}</td>
+                        <td className="num">{num2(r.weight_lightgbm)}</td>
+                        <td className="num">{num0(r.val_mae)} MW</td>
+                        <td className="num">{num0(r.val_mae_lightgbm_only)} MW</td>
+                        <td className="num">{num0(r.val_mae_mstl_only)} MW</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
           </details>
         ) : (
           <Loading error={error} />

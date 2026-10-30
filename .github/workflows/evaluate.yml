@@ -1,9 +1,9 @@
 name: Evaluasi OPSD
 
 # Dijalankan manual dari tab Actions. Mengunduh data Open Power System Data, mengunci SHA-256-nya,
-# menjalankan seleksi validasi + uji sekali + prakiraan perencanaan, lalu membuka pull request
-# berisi hasil (reports/, web/public/data/, docs/laporan-evaluasi.md). Tidak ada yang langsung
-# masuk ke main: hasil ditinjau dulu lewat PR.
+# menjalankan seleksi validasi + uji sekali + prakiraan perencanaan. Dijalankan dari main:
+# hasil dibuka sebagai pull request baru. Dijalankan dari cabang lain: hasil di-commit ke cabang
+# itu (yang sudah punya PR). Tidak ada yang langsung masuk ke main.
 on:
   workflow_dispatch:
 
@@ -54,17 +54,25 @@ jobs:
             docs/laporan-evaluasi.md
             data/manifest.json
           retention-days: 30
-      - name: Buka pull request hasil
+      - name: Simpan hasil (PR baru dari main, commit ke cabang lain)
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH: hasil/opsd-${{ github.run_id }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$BRANCH"
-          git add reports/results.json reports/test_forecasts.npz web/public/data docs/laporan-evaluasi.md data/manifest.json
-          git commit -m "Hasil evaluasi OPSD (run ${{ github.run_id }})"
-          git push origin "$BRANCH"
-          gh pr create --base "${{ github.ref_name }}" --head "$BRANCH" \
-            --title "Hasil evaluasi OPSD (run ${{ github.run_id }})" \
-            --body "Dibuat otomatis oleh workflow Evaluasi OPSD, run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. Tinjau docs/laporan-evaluasi.md sebelum merge."
+          files="reports/results.json reports/test_forecasts.npz web/public/data docs/laporan-evaluasi.md data/manifest.json"
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            git switch -c "$BRANCH"
+            git add $files
+            git commit -m "Hasil evaluasi OPSD (run ${{ github.run_id }})"
+            git push origin "$BRANCH"
+            gh pr create --base main --head "$BRANCH" \
+              --title "Hasil evaluasi OPSD (run ${{ github.run_id }})" \
+              --body "Dibuat otomatis oleh workflow Evaluasi OPSD, run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. Tinjau docs/laporan-evaluasi.md sebelum merge." \
+              || echo "::warning::PR tidak bisa dibuat otomatis; cabang $BRANCH sudah didorong, buka PR secara manual."
+          else
+            git add $files
+            git commit -m "Hasil evaluasi OPSD (run ${{ github.run_id }})"
+            git push origin "HEAD:${{ github.ref_name }}"
+          fi

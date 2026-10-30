@@ -82,11 +82,13 @@ for (const scheme of SCHEMES) {
   await page.goto(`${base}/#kinerja`);
   await waitView(page);
   const fmt = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 });
-  for (const [model, label] of [
+  const rows = [
     ["lightgbm", "LightGBM"],
     ["mstl_ets", "MSTL + ETS"],
     ["snaive168", "Naive mingguan"],
-  ]) {
+  ];
+  if ("ensemble" in metrics.metrics.test) rows.unshift(["ensemble", "Gabungan"]);
+  for (const [model, label] of rows) {
     const row = page.locator("table.metrics tbody tr", { hasText: label });
     const cell = await row.locator("td").nth(1).innerText();
     const want = fmt.format(metrics.metrics.test[model].week_ahead.mae);
@@ -102,7 +104,7 @@ for (const scheme of SCHEMES) {
   const after = await peak();
   const val = (s) => Number(s.replace(/[^\d,]/g, "").replace(",", "."));
   ok(Math.abs(val(after) / val(before) - 1.1) < 0.02, `skenario +10%: puncak ${before} -> ${after}`);
-  await page.getByRole("radio", { name: /MSTL/ }).check();
+  await page.getByRole("radio", { name: /^MSTL/ }).check();
   await waitView(page);
   ok((await page.locator(".provenance").innerText()).includes("MSTL + ETS"), "pilihan model tidak tercermin di keterangan");
   // Navigasi keyboard: tautan lompat lalu navigasi bisa dicapai dari awal halaman.

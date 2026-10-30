@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LABEL = {
+    "ensemble": "Gabungan",
     "lightgbm": "LightGBM",
     "mstl_ets": "MSTL + ETS",
     "snaive168": "Naive mingguan",
@@ -44,6 +45,8 @@ def table(period: dict) -> list[str]:
         "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for m in LABEL:
+        if m not in period:
+            continue
         r = period[m]
         w = r["week_ahead"]
         diff = (
@@ -60,14 +63,43 @@ def table(period: dict) -> list[str]:
     return rows
 
 
+def comparison(r: dict, v1: dict) -> list[str]:
+    out = [
+        "## Perbandingan dengan v1 (uji 2019 s.d. Sep 2020)",
+        "",
+        "v1 adalah hasil resmi pertama dengan protokol yang dikunci sebelum uji pernah dilihat. "
+        "v2 dirancang **sesudah** hasil uji v1 terlihat (terutama kegagalan MSTL + ETS di hari "
+        "libur), walaupun semua pilihan v2 tetap diambil hanya dari validasi 2018. Karena itu "
+        "kenaikan v2 di periode uji bukan estimasi holdout buta; angka validasi v2 di atas adalah "
+        "pembanding yang lebih adil.",
+        "",
+        "| Model | Versi | MAE 24 jam | MAE 7 hari | MASE 7 hari | Coverage 80% | Coverage 95% |",
+        "|---|---|---:|---:|---:|---:|---:|",
+    ]
+    for m in LABEL:
+        for tag, res in (("v1", v1), ("v2", r)):
+            t = res["metrics"]["test"].get(m)
+            if t is None:
+                continue
+            out.append(
+                f"| {LABEL[m]} | {tag} | {f0(t['day_ahead']['mae'])} | {f0(t['week_ahead']['mae'])} "
+                f"| {f2(t['week_ahead']['mase'])} | {p1(t['interval']['80']['coverage'])} "
+                f"| {p1(t['interval']['95']['coverage'])} |"
+            )
+    return out + [""]
+
+
 def main(reports: Path) -> str:
     r = json.loads((reports / "results.json").read_text(encoding="utf-8"))
     pr = r["protocol"]
+    v1_path = reports / "v1" / "results.json"
+    v1 = json.loads(v1_path.read_text(encoding="utf-8")) if v1_path.exists() else None
     out = [
         "# Laporan evaluasi",
         "",
         "Dibuat otomatis oleh `tools/write_report.py` dari `reports/results.json`. Jangan diedit tangan.",
         "",
+        f"- Protokol: {pr.get('version', 'v1')}",
         f"- Sumber data: {r['source']['name']} ({r['source']['license']})",
         f"- SHA-256: {', '.join(f'`{k}` `{v}`' for k, v in r['source']['sha256'].items())}",
         f"- Origin validasi: {pr['validation_origins'][0]} s.d. {pr['validation_origins'][1]}; "
@@ -87,16 +119,44 @@ def main(reports: Path) -> str:
             *table(r["metrics"][key]),
             "",
         ]
+    if v1 is not None:
+        out += comparison(r, v1)
     out += ["## Seleksi di validasi", "", "| Kandidat | MAE 7 hari validasi |", "|---|---:|"]
     for fam in ("mstl_ets", "lightgbm"):
         for row in r["selection"][fam]:
             params = ", ".join(f"{k}={v}" for k, v in row["params"].items() if k != "target")
             out.append(f"| {LABEL[fam]} {params} | {f0(row['val_mae_week_ahead'])} |")
-    out += ["", "| Model | Jendela interval terpilih (hari) |", "|---|---:|"]
+    if "ensemble" in r["selection"]:
+        out += [
+            "",
+            "Bobot gabungan per hari horizon (porsi LightGBM; sisanya MSTL + ETS), dipilih di validasi:",
+            "",
+            "| Hari | Bobot LightGBM | MAE validasi gabungan | Hanya LightGBM | Hanya MSTL + ETS |",
+            "|---:|---:|---:|---:|---:|",
+        ]
+        for row in r["selection"]["ensemble"]:
+            out.append(
+                f"| {row['day']} | {f2(row['weight_lightgbm'])} | {f0(row['val_mae'])} "
+                f"| {f0(row['val_mae_lightgbm_only'])} | {f0(row['val_mae_mstl_only'])} |"
+            )
+        t = r["metrics"]["test"]["ensemble"]["week_ahead"]
+        if "mae_minus_lightgbm" in t:
+            out += [
+                "",
+                f"Uji: selisih MAE 7 hari gabungan dikurangi LightGBM {sgn(t['mae_minus_lightgbm'])} MW "
+                f"(CI 95% {sgn(t['mae_minus_lightgbm_ci95'][0])} s.d. "
+                f"{sgn(t['mae_minus_lightgbm_ci95'][1])}).",
+            ]
+    out += ["", "| Model | Jendela interval terpilih (hari) | Jenis residual |", "|---|---:|---|"]
     for m, info in r["models"].items():
-        out.append(f"| {LABEL[m]} | {info['conformal_window_days']} |")
+        mode = {"absolute": "absolut", "relative": "relatif"}.get(
+            info.get("conformal_residual", "absolute")
+        )
+        out.append(f"| {LABEL[m]} | {info['conformal_window_days']} | {mode} |")
     out += ["", "## Analisis kegagalan (uji)", ""]
-    for m in ("lightgbm", "mstl_ets", "snaive168"):
+    for m in [
+        x for x in ("ensemble", "lightgbm", "mstl_ets", "snaive168") if x in r["errors"]["by_model"]
+    ]:
         e = r["errors"]["by_model"][m]
         worst = ", ".join(f"{w['origin']} ({f0(w['mae'])})" for w in e["worst_origins"][:5])
         out.append(

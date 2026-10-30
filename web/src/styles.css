@@ -17,6 +17,7 @@
   --accent-orange-soft: #fff1e6;
   --grid: #e4edf4;
   --axis: #a9c0d2;
+  --series-ensemble: #6250d6;
   --series-lightgbm: #2a78d6;
   --series-mstl_ets: #eb6834;
   --series-snaive168: #1baf7a;
@@ -48,6 +49,7 @@
     --accent-orange-soft: #2e1c0f;
     --grid: #183043;
     --axis: #35526b;
+    --series-ensemble: #9085e9;
     --series-lightgbm: #3987e5;
     --series-mstl_ets: #d95926;
     --series-snaive168: #199e70;
@@ -76,6 +78,7 @@
   --accent-orange-soft: #2e1c0f;
   --grid: #183043;
   --axis: #35526b;
+  --series-ensemble: #9085e9;
   --series-lightgbm: #3987e5;
   --series-mstl_ets: #d95926;
   --series-snaive168: #199e70;
@@ -273,3 +276,4 @@ ul.plain { margin: 8px 0; padding-left: 20px; display: grid; gap: 6px; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+.note { border-left: 4px solid var(--accent-orange); background: var(--surface-sunken); padding: 10px 14px; border-radius: 6px; margin: 12px 0 0; }

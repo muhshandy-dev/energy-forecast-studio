@@ -7,7 +7,7 @@ export type Verdict = { model: ModelName; text: string; kind: "better" | "unclea
  * memakai CI bootstrap selisih MAE (negatif = lebih baik).
  */
 export function verdict(p: PeriodMetrics): Verdict {
-  const candidates: ModelName[] = ["lightgbm", "mstl_ets"];
+  const candidates = (["ensemble", "lightgbm", "mstl_ets"] as ModelName[]).filter((m) => m in p);
   const best = candidates.reduce((a, b) => (p[a].week_ahead.mae <= p[b].week_ahead.mae ? a : b));
   const w = p[best].week_ahead;
   const [lo, hi] = w.mae_minus_snaive168_ci95;

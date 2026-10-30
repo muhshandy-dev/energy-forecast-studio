@@ -5,7 +5,7 @@ import { modelColor, modelDash } from "../lib/colors";
 import { loadErrors, loadMetrics } from "../lib/data";
 import { num0, num2, pct, plainDate, signedMw } from "../lib/format";
 import { token } from "../lib/theme";
-import { MODEL_LABEL, MODEL_ORDER, type MetaFile, type ModelName, type PeriodName } from "../lib/types";
+import { MODEL_LABEL, chartModels, modelsIn, type MetaFile, type PeriodName } from "../lib/types";
 import { useAsync } from "../lib/useAsync";
 import { verdict } from "../lib/verdict";
 
@@ -26,7 +26,7 @@ export function Performance({ meta, theme }: { meta: MetaFile; theme: string }) 
   const v = verdict(p);
   const hAxis = Array.from({ length: 168 }, (_, i) => i + 1);
 
-  const maeTraces = MODEL_ORDER.map((m) => ({
+  const maeTraces = chartModels(data.per_horizon_test).map((m) => ({
     x: hAxis,
     y: data.per_horizon_test[m].mae,
     name: MODEL_LABEL[m],
@@ -35,7 +35,7 @@ export function Performance({ meta, theme }: { meta: MetaFile; theme: string }) 
     hovertemplate: `%{y:,.0f} MW<extra>${MODEL_LABEL[m]}</extra>`,
   }));
   const covKey = level === "80" ? "coverage80" : "coverage95";
-  const covTraces = MODEL_ORDER.map((m) => ({
+  const covTraces = chartModels(data.per_horizon_test).map((m) => ({
     x: hAxis,
     y: data.per_horizon_test[m][covKey].map((c) => c * 100),
     name: MODEL_LABEL[m],
@@ -75,7 +75,7 @@ export function Performance({ meta, theme }: { meta: MetaFile; theme: string }) 
               </tr>
             </thead>
             <tbody>
-              {MODEL_ORDER.map((m) => {
+              {modelsIn(p).map((m) => {
                 const r = p[m];
                 const w = r.week_ahead;
                 return (
@@ -179,7 +179,9 @@ export function Performance({ meta, theme }: { meta: MetaFile; theme: string }) 
           lead="Rata-rata MAE 7 hari dari origin dalam tiap minggu. Lonjakan biasanya terjadi di sekitar libur dan pada guncangan permintaan musim semi 2020."
         >
           <Plot
-            data={(["lightgbm", "mstl_ets", "snaive168"] as ModelName[]).map((m) => ({
+            data={chartModels(errs.data.weekly_mae)
+              .filter((m) => m !== "snaive24")
+              .map((m) => ({
               x: errs.data!.weekly_mae.week_start,
               y: errs.data!.weekly_mae[m],
               name: MODEL_LABEL[m],

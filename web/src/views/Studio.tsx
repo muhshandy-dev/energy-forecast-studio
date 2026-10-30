@@ -13,7 +13,7 @@ import {
   type Exceedance,
 } from "../lib/scenario";
 import { token } from "../lib/theme";
-import { MODEL_KIND, MODEL_LABEL, MODEL_ORDER, type MetaFile, type ModelName } from "../lib/types";
+import { MODEL_KIND, MODEL_LABEL, modelsIn, headlineModel, type MetaFile, type ModelName } from "../lib/types";
 import { useAsync } from "../lib/useAsync";
 
 const HORIZONS = [24, 72, 168] as const;
@@ -26,7 +26,8 @@ export function exceedLabel(e: Exceedance): string {
 
 export function Studio({ meta, theme }: { meta: MetaFile; theme: string }) {
   const { data: plan, error } = useAsync(loadPlanning);
-  const [model, setModel] = useState<ModelName>("lightgbm");
+  const [picked, setModel] = useState<ModelName | null>(null);
+  const model: ModelName = picked ?? (plan ? headlineModel(plan.models) : "lightgbm");
   const [horizon, setHorizon] = useState<number>(168);
   const [level, setLevel] = useState<number>(0.8);
   const [shift, setShift] = useState<number>(0);
@@ -47,7 +48,7 @@ export function Studio({ meta, theme }: { meta: MetaFile; theme: string }) {
     point.forEach((v, i) => {
       if (v > point[peak]) peak = i;
     });
-    const defaultCap = Math.ceil((Math.max(...plan.models.lightgbm.point_mw) * 1.0) / 1000) * 1000;
+    const defaultCap = Math.ceil((Math.max(...plan.models[headlineModel(plan.models)].point_mw) * 1.0) / 1000) * 1000;
     const cap = capacity ?? defaultCap;
     const ex = exceedanceByHour(probs, m.quantiles_mw, cap, shift, horizon);
     const expected = expectedHoursAbove(ex);
@@ -196,7 +197,7 @@ export function Studio({ meta, theme }: { meta: MetaFile; theme: string }) {
         <h2>Atur prakiraan</h2>
         <fieldset className="model-pick">
           <legend>Model</legend>
-          {MODEL_ORDER.map((m) => (
+          {modelsIn(plan?.models ?? {}).map((m) => (
             <label key={m} className={m === model ? "on" : ""}>
               <input type="radio" name="model" checked={m === model} onChange={() => setModel(m)} />
               <span className="dot" style={{ background: modelColor(m) }} aria-hidden="true" />
