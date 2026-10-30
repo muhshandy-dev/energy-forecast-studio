@@ -5,9 +5,8 @@ dengan interval prediksi, skenario permintaan, dan peluang beban melewati batas 
 Yang diuji bukan tampilannya, melainkan apakah model benar-benar lebih baik daripada tebakan
 paling sederhana.
 
-> **Status:** pipeline, tes, dan website sudah dibangun. Hasil resmi pada data Open Power System
-> Data **belum ada** sampai pipeline dijalankan dengan host data OPSD yang dapat dijangkau.
-> Lihat [Hasil](#hasil).
+> **Status:** hasil resmi pada data Open Power System Data sudah ada (workflow Evaluasi OPSD,
+> run 41080532889). Website live dan notebook Kaggle belum terverifikasi. Lihat [Hasil](#hasil).
 
 ## Masalah
 
@@ -50,10 +49,30 @@ Detail: [docs/laporan-evaluasi.md](docs/laporan-evaluasi.md) dan [docs/kartu-mod
 
 ## Hasil
 
-Belum ada hasil resmi. Hasil resmi dibuat oleh workflow GitHub Actions **Evaluasi OPSD**
-(`.github/workflows/evaluate.yml`, dijalankan manual) yang mengunduh data OPSD, mengunci SHA-256,
-menjalankan eksperimen, memeriksa angka secara independen, lalu membuka pull request berisi
-`reports/`, `web/public/data/`, dan [docs/laporan-evaluasi.md](docs/laporan-evaluasi.md).
+Periode uji 1 Jan 2019 sampai 24 Sep 2020 (633 origin harian, horizon 7 hari), data OPSD dengan
+SHA-256 `6a7f2bc5…04c8`. MAE dalam MW; selisih negatif berarti lebih akurat daripada naive mingguan.
+
+| Model | MAE 24 jam | MAE 7 hari | MASE 7 hari | Selisih vs naive mingguan (CI 95%) | Coverage 80% / 95% |
+|---|---:|---:|---:|---:|---:|
+| LightGBM | 1.191 | 1.341 | 0,59 | −1.060 (−1.354 s.d. −732) | 78,3% / 93,2% |
+| MSTL + ETS | 1.959 | 2.541 | 1,12 | +140 (+3 s.d. +296) | 80,8% / 92,8% |
+| Naive mingguan | 2.422 | 2.401 | 1,05 | acuan | 79,1% / 92,1% |
+| Naive harian | 4.341 | 5.943 | 2,61 | +3.543 (+3.259 s.d. +3.851) | 81,4% / 96,1% |
+
+- **LightGBM** mengalahkan naive mingguan dengan selang kepercayaan seluruhnya di bawah nol, juga
+  pada validasi 2018 (dipilih di sana: num_leaves 127, objektif l2).
+- **MSTL + ETS tidak mengalahkan naive mingguan untuk 7 hari** (selisih +140 MW, CI di atas nol).
+  Untuk 24 jam ke depan ia lebih baik (1.959 vs 2.422 MW). Ini dilaporkan apa adanya.
+- **Coverage**: interval 80% mendekati nominal; interval 95% sedikit di bawah nominal (92% sampai 93%)
+  untuk semua model kecuali naive harian.
+- **Kegagalan**: minggu terburuk LightGBM adalah awal April 2020 (Paskah bersamaan dengan pembatasan
+  COVID). MSTL + ETS dan naive mingguan paling buruk di libur nasional (MAE jam libur sekitar
+  11.600 sampai 12.600 MW vs sekitar 2.200 MW di jam biasa), karena keduanya tidak tahu kalender libur.
+
+Laporan lengkap (validasi, uji 2019 dan 2020 terpisah, seleksi, analisis kegagalan):
+[docs/laporan-evaluasi.md](docs/laporan-evaluasi.md). Hasil ini dibuat oleh workflow GitHub Actions
+**Evaluasi OPSD** (`.github/workflows/evaluate.yml`) dan diperiksa ulang secara independen oleh
+`tools/verify_published.py`.
 
 ### Catatan kejujuran tentang periode uji
 
