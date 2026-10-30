@@ -30,3 +30,14 @@ def series() -> pd.Series:
 def cal(series) -> pd.DataFrame:
     grid = pd.date_range(series.index[0], periods=len(series) + 168, freq="1h", tz="UTC")
     return calendar(grid)
+
+
+@pytest.fixture(scope="session")
+def cal_special(cal) -> pd.DataFrame:
+    """Kalender sintetis dengan hari libur buatan (tipe 1) sebelum dan sesudah origin uji."""
+    out = cal.copy()
+    special = out["special"].to_numpy().copy()
+    for day in (16, 23, 30, 37, 41, 44, 63):
+        special[24 * day : 24 * (day + 1)] = 1
+    out["special"] = special
+    return out

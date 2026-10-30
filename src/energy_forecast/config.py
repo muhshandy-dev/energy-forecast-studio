@@ -1,4 +1,7 @@
-"""Protokol eksperimen yang dikunci sebelum melihat hasil uji.
+"""Protokol eksperimen.
+
+v1 dikunci sebelum hasil uji pertama. v2 (protokol ini) ditulis sesudah hasil uji v1 resmi
+terlihat; semua pilihan baru tetap dipilih hanya di validasi 2018 (lihat README).
 
 Semua waktu dalam UTC. Origin = saat prakiraan dibuat (00:00 UTC setiap hari); prakiraan
 mencakup jam ``origin`` sampai ``origin + 167 jam`` (h = 1..168). Model hanya boleh memakai
@@ -21,7 +24,9 @@ SCALE_START = pd.Timestamp("2015-01-01 00:00", tz="UTC")
 SCALE_END = pd.Timestamp("2017-12-31 23:00", tz="UTC")
 
 # Origin pemanasan hanya untuk mengumpulkan residual kalibrasi interval, tidak dinilai.
-WARMUP = (pd.Timestamp("2017-10-01", tz="UTC"), pd.Timestamp("2017-12-31", tz="UTC"))
+# v2: diperpanjang dari 2017-10-01 ke 2017-01-01 agar jendela residual 182 dan 364 hari
+# punya cukup origin sejak awal validasi.
+WARMUP = (pd.Timestamp("2017-01-01", tz="UTC"), pd.Timestamp("2017-12-31", tz="UTC"))
 VALIDATION = (pd.Timestamp("2018-01-01", tz="UTC"), pd.Timestamp("2018-12-31", tz="UTC"))
 # Origin terakhir yang seluruh 168 jamnya masih punya data aktual.
 TEST = (pd.Timestamp("2019-01-01", tz="UTC"), DATA_END - pd.Timedelta(hours=HORIZON - 1))
@@ -36,6 +41,7 @@ QUANTILE_GRID = (0.025, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.
 BOOTSTRAP_RESAMPLES = 2000
 BOOTSTRAP_BLOCK_DAYS = 7
 SEED = 20261029
+PROTOCOL_VERSION = "v2"
 
 TIMEZONE = "Europe/Berlin"
 

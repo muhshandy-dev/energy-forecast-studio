@@ -3,6 +3,10 @@
 Untuk origin pada posisi ``p`` (indeks jam pertama yang diprakirakan) dan horizon ``h``,
 waktu target ``t = p + h - 1``. Semua fitur nilai beban hanya membaca posisi < ``p``:
 lag 168/336/504 jam aman karena ``h <= 168`` sehingga ``t - 168 <= p - 1``.
+
+Deret "bersih libur" (``clean_holidays``) mengganti jam hari khusus dengan nilai seminggu
+sebelumnya dari deret bersih itu sendiri, jadi nilai bersih di jam ``t`` hanya bergantung
+pada ``y[:t+1]`` (kausal) dan aman dipakai sebagai lag.
 """
 
 from __future__ import annotations
@@ -34,6 +38,36 @@ FEATURES = [
     "mean24_r",
 ]
 
+# Fitur tambahan v2: tipe hari khusus dan lag dari deret bersih libur.
+FEATURES_V2 = FEATURES + [
+    "special",
+    "special_lag168",
+    "lag168c_r",
+    "lag336c_r",
+    "naive24c_r",
+]
+
+# Tipe hari khusus (dipakai penyesuaian kalender dan fitur v2).
+NORMAL, HOLIDAY, XMAS, BRIDGE = 0, 1, 2, 3
+
+
+def special_type(cal: pd.DataFrame) -> np.ndarray:
+    """0 = biasa, 1 = libur nasional, 2 = 24-31 Des & 1 Jan, 3 = hari kejepit."""
+    out = np.zeros(len(cal), dtype=np.int8)
+    out[cal["is_bridge"].to_numpy().astype(bool)] = BRIDGE
+    out[cal["is_holiday"].to_numpy().astype(bool)] = HOLIDAY
+    out[cal["xmas"].to_numpy().astype(bool)] = XMAS
+    return out
+
+
+def clean_holidays(y: np.ndarray, special: np.ndarray) -> np.ndarray:
+    """Ganti jam hari khusus dengan nilai bersih 168 jam sebelumnya (berantai, kausal)."""
+    c = np.asarray(y, dtype=float).copy()
+    idx = np.nonzero(special[: len(c)])[0]
+    for t in idx[idx >= 168]:
+        c[t] = c[t - 168]
+    return c
+
 
 def calendar(index: pd.DatetimeIndex) -> pd.DataFrame:
     """Fitur kalender lokal Jerman untuk setiap jam UTC (tidak memakai data beban)."""
@@ -60,11 +94,15 @@ def calendar(index: pd.DatetimeIndex) -> pd.DataFrame:
             "doy_cos": np.cos(2 * np.pi * doy / 365.25),
         },
         index=index,
-    )
+    ).assign(special=lambda d: special_type(d))
 
 
 def origin_rows(
-    y: np.ndarray, cal: pd.DataFrame, positions: np.ndarray, max_target: int | None = None
+    y: np.ndarray,
+    cal: pd.DataFrame,
+    positions: np.ndarray,
+    max_target: int | None = None,
+    feature_set: str = "v1",
 ) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
     """Bangun baris fitur untuk setiap origin di ``positions`` dan setiap h = 1..168.
 
@@ -72,6 +110,8 @@ def origin_rows(
     ``cal`` harus menjangkau sampai ``max(positions) + HORIZON``.
     Jika ``max_target`` diberikan, baris dengan ``t >= max_target`` dibuang (untuk latih).
     Mengembalikan (fitur, posisi target t, level m168 per baris).
+    ``feature_set="v2"`` menambah fitur hari khusus dan lag bersih libur, dan level m168
+    dihitung dari deret bersih libur agar minggu Natal tidak menurunkan skala target.
     """
     positions = np.asarray(positions, dtype=np.int64)
     if positions.size and positions.min() < MIN_HISTORY:
@@ -84,9 +124,15 @@ def origin_rows(
         keep = t < max_target
         p, h, t = p[keep], h[keep], t[keep]
 
-    csum = np.concatenate([[0.0], np.cumsum(y[: positions.max()])]) if positions.size else None
+    if feature_set not in ("v1", "v2"):
+        raise ValueError(f"feature_set tidak dikenal: {feature_set}")
+    special = cal["special"].to_numpy()
+    yc = clean_holidays(y[: positions.max()], special) if feature_set == "v2" else None
+    level_src = yc if yc is not None else y[: positions.max()]
+    csum = np.concatenate([[0.0], np.cumsum(level_src)])
     m168 = (csum[p] - csum[p - 168]) / 168
-    m24 = (csum[p] - csum[p - 24]) / 24
+    raw_csum = np.concatenate([[0.0], np.cumsum(y[: positions.max()])])
+    m24 = (raw_csum[p] - raw_csum[p - 24]) / 24
     k = np.ceil(h / 24).astype(np.int64)
     naive24 = y[t - 24 * k]
     for lag_pos in (t - 168, t - 336, t - 504, p - 1, t - 24 * k):
@@ -114,4 +160,11 @@ def origin_rows(
             "mean24_r": m24 / m168,
         }
     )
-    return X[FEATURES], t, m168
+    if yc is None:
+        return X[FEATURES], t, m168
+    X["special"] = special[t]
+    X["special_lag168"] = special[t - 168]
+    X["lag168c_r"] = yc[t - 168] / m168
+    X["lag336c_r"] = yc[t - 336] / m168
+    X["naive24c_r"] = yc[t - 24 * k] / m168
+    return X[FEATURES_V2], t, m168
