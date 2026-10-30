@@ -79,7 +79,8 @@ def main() -> int:
     if errors:
         print("GAGAL:\n- " + "\n- ".join(errors))
         return 1
-    print(f"OK: {sum(k.startswith('pred_') for k in arr.files)} model, metrik uji dan berkas web konsisten")
+    n_models = sum(k.startswith("pred_") for k in arr.files)
+    print(f"OK: {n_models} model, metrik uji dan berkas web konsisten")
     return 0
 
 
